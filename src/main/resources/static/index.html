@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>SafeSignal — Time-aware safety navigation</title>
+
+    <link
+            rel="stylesheet"
+            href="style.css"
+    >
+
+    <!-- Leaflet CSS -->
+    <link
+            rel="stylesheet"
+            href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================================
+     HEADER
+     ========================================================= -->
+
+<header class="site-header">
+
+    <div class="header-content">
+
+        <div class="brand">
+
+            <div class="brand-icon">
+                🛡️
+            </div>
+
+            <div>
+
+                <h1>SafeSignal</h1>
+
+                <p>
+                    Time-aware safety navigation
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="status">
+
+            <span class="status-dot"></span>
+
+            <span>Safety layer active</span>
+
+        </div>
+
+    </div>
+
+</header>
+
+
+
+<!-- =========================================================
+     MAIN
+     ========================================================= -->
+
+<main>
+
+
+    <!-- =====================================================
+         HERO / JOURNEY PLANNER
+         ===================================================== -->
+
+    <section class="search-panel planner-panel">
+
+        <div class="planner-header">
+
+            <div class="planner-icon">
+                ✦
+            </div>
+
+            <div>
+
+                <div class="eyebrow">
+                    SMART ROUTE PLANNING
+                </div>
+
+                <h2>
+                    Plan your journey
+                </h2>
+
+                <p>
+                    Compare routes using time-aware
+                    community safety information.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- LOCATION ROW -->
+
+        <div class="form-grid location-grid">
+
+
+            <!-- STARTING POINT -->
+
+            <div class="form-group location-field">
+
+                <label for="originSearch">
+                    <span class="label-icon">📍</span>
+                    Starting point
+                </label>
+
+
+                <div class="input-wrapper">
+
+                    <input
+                            type="text"
+                            id="originSearch"
+                            placeholder="Search for a place or address..."
+                            autocomplete="off"
+                    >
+
+                    <span class="input-status">
+                        →
+                    </span>
+
+                </div>
+
+
+                <div
+                        id="originSuggestions"
+                        class="location-suggestions"
+                ></div>
+
+
+                <input
+                        type="hidden"
+                        id="originLatitude"
+                >
+
+                <input
+                        type="hidden"
+                        id="originLongitude"
+                >
+
+            </div>
+
+
+
+            <!-- DESTINATION -->
+
+            <div class="form-group location-field">
+
+                <label for="destinationSearch">
+                    <span class="label-icon">🏁</span>
+                    Destination
+                </label>
+
+
+                <div class="input-wrapper">
+
+                    <input
+                            type="text"
+                            id="destinationSearch"
+                            placeholder="Search for a place or address..."
+                            autocomplete="off"
+                    >
+
+                    <span class="input-status">
+                        ✓
+                    </span>
+
+                </div>
+
+
+                <div
+                        id="destinationSuggestions"
+                        class="location-suggestions"
+                ></div>
+
+
+                <input
+                        type="hidden"
+                        id="destinationLatitude"
+                >
+
+                <input
+                        type="hidden"
+                        id="destinationLongitude"
+                >
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- DATE + TIME -->
+
+        <div class="time-grid planner-time-grid">
+
+
+            <div class="form-group">
+
+                <label for="travelDate">
+                    <span class="label-icon">📅</span>
+                    Travel date
+                </label>
+
+
+                <input
+                        type="date"
+                        id="travelDate"
+                >
+
+            </div>
+
+
+
+            <div class="form-group">
+
+                <label for="travelTime">
+                    <span class="label-icon">🕐</span>
+                    Travel time
+                </label>
+
+
+                <input
+                        type="time"
+                        id="travelTime"
+                >
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- FIND ROUTES -->
+
+        <button
+                id="findRoutes"
+                class="primary-button"
+        >
+
+            <span>🛡</span>
+
+            Find safer routes
+
+            <span class="button-arrow">
+                →
+            </span>
+
+        </button>
+
+
+        <div class="planner-note">
+
+            <span>●</span>
+
+            Safety scores are based on community reports
+            relevant to your selected travel time.
+
+        </div>
+
+
+    </section>
+
+
+
+    <!-- =====================================================
+         SAFETY MAP
+         ===================================================== -->
+
+    <section class="map-panel">
+
+        <div class="map-header">
+
+            <div>
+
+                <div class="eyebrow">
+                    LIVE ROUTE VIEW
+                </div>
+
+                <h2>
+                    Safety map
+                </h2>
+
+                <p>
+                    View routes, reported safety signals,
+                    and streetlight observations around your journey.
+                </p>
+
+            </div>
+
+
+            <div class="map-badge">
+                <span class="map-badge-dot"></span>
+                Map analysis
+            </div>
+
+        </div>
+
+
+        <div class="map-container">
+
+            <div id="map"></div>
+
+
+            <!-- MAP LEGEND -->
+
+            <div class="map-legend">
+
+                <div class="legend-title">
+                    MAP LEGEND
+                </div>
+
+
+                <div class="legend-row">
+
+                    <span class="legend-line recommended-line"></span>
+
+                    <span>
+                        Recommended
+                    </span>
+
+                </div>
+
+
+                <div class="legend-row">
+
+                    <span class="legend-line route-line"></span>
+
+                    <span>
+                        Other route
+                    </span>
+
+                </div>
+
+
+                <div class="legend-row">
+
+                    <span class="legend-dot incident-dot"></span>
+
+                    <span>
+                        Safety report
+                    </span>
+
+                </div>
+
+
+                <div class="legend-divider"></div>
+
+
+                <div class="legend-row">
+
+                    <span class="legend-dot light-working"></span>
+
+                    <span>
+                        Working light
+                    </span>
+
+                </div>
+
+
+                <div class="legend-row">
+
+                    <span class="legend-dot light-dim"></span>
+
+                    <span>
+                        Dim light
+                    </span>
+
+                </div>
+
+
+                <div class="legend-row">
+
+                    <span class="legend-dot light-off"></span>
+
+                    <span>
+                        Not working
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         REPORT SAFETY ISSUE
+         ===================================================== -->
+
+    <section class="search-panel report-panel">
+
+
+        <div class="section-title report-title">
+
+            <div class="report-icon">
+                ⚠
+            </div>
+
+
+            <div>
+
+                <div class="eyebrow">
+                    COMMUNITY SIGNAL
+                </div>
+
+                <h2>
+                    Report a safety issue
+                </h2>
+
+                <p>
+                    Help improve SafeSignal by anonymously
+                    reporting a safety concern.
+                </p>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="privacy-note">
+
+            <span>🔒</span>
+
+            Reports are anonymous and used only to improve
+            route safety information.
+
+        </div>
+
+
+
+        <!-- LOCATION + INCIDENT -->
+
+        <div class="form-grid report-grid">
+
+
+            <!-- REPORT LOCATION -->
+
+            <div class="form-group">
+
+                <label>
+                    <span class="label-icon">📍</span>
+                    Report location
+                </label>
+
+
+                <button
+                        type="button"
+                        id="chooseReportLocation"
+                        class="secondary-button"
+                >
+
+                    <span>📍</span>
+
+                    Choose location on map
+
+                    <span class="button-arrow">
+                        →
+                    </span>
+
+                </button>
+
+
+                <div
+                        id="selectedReportLocation"
+                        class="location-status"
+                >
+                    No location selected
+                </div>
+
+
+                <input
+                        type="hidden"
+                        id="reportLatitude"
+                >
+
+                <input
+                        type="hidden"
+                        id="reportLongitude"
+                >
+
+                <input
+                        type="hidden"
+                        id="reportStreetName"
+                >
+
+                <input
+                        type="hidden"
+                        id="reportAreaName"
+                >
+
+            </div>
+
+
+
+            <!-- INCIDENT TYPE -->
+
+            <div class="form-group">
+
+                <label for="incidentType">
+                    <span class="label-icon">⚠️</span>
+                    Issue type
+                </label>
+
+
+                <select id="incidentType">
+
+                    <option value="">
+                        Select an issue
+                    </option>
+
+                    <option value="HARASSMENT">
+                        Harassment
+                    </option>
+
+                    <option value="STALKING">
+                        Stalking
+                    </option>
+
+                    <option value="UNWANTED_ATTENTION">
+                        Unwanted attention
+                    </option>
+
+                    <option value="POOR_VISIBILITY">
+                        Poor visibility
+                    </option>
+
+                    <option value="UNSAFE_CROWDING">
+                        Unsafe crowding
+                    </option>
+
+                    <option value="OTHER">
+                        Other
+                    </option>
+
+                </select>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- SEVERITY -->
+
+        <div class="form-group">
+
+            <label for="severity">
+                <span class="label-icon">●</span>
+                Severity
+            </label>
+
+
+            <select id="severity">
+
+                <option value="1">
+                    1 — Low
+                </option>
+
+                <option value="2">
+                    2 — Mild
+                </option>
+
+                <option
+                        value="3"
+                        selected
+                >
+                    3 — Moderate
+                </option>
+
+                <option value="4">
+                    4 — Serious
+                </option>
+
+                <option value="5">
+                    5 — Very serious
+                </option>
+
+            </select>
+
+        </div>
+
+
+
+        <!-- REPORT DATE + TIME -->
+
+        <div class="time-grid">
+
+
+            <div class="form-group">
+
+                <label for="reportDate">
+                    <span class="label-icon">📅</span>
+                    Date
+                </label>
+
+
+                <input
+                        type="date"
+                        id="reportDate"
+                >
+
+            </div>
+
+
+
+            <div class="form-group">
+
+                <label for="reportTime">
+                    <span class="label-icon">🕐</span>
+                    Approximate time
+                </label>
+
+
+                <input
+                        type="time"
+                        id="reportTime"
+                >
+
+            </div>
+
+        </div>
+
+
+
+        <!-- DESCRIPTION -->
+
+        <div class="form-group">
+
+            <label for="reportDescription">
+                <span class="label-icon">✎</span>
+                Description
+            </label>
+
+
+            <textarea
+                    id="reportDescription"
+                    rows="4"
+                    placeholder="Briefly describe what happened..."
+            ></textarea>
+
+        </div>
+
+
+
+        <!-- SUBMIT -->
+
+        <button
+                id="submitReport"
+                class="report-submit-button"
+        >
+
+            <span>⚠</span>
+
+            Submit anonymous report
+
+            <span class="button-arrow">
+                →
+            </span>
+
+        </button>
+
+
+        <div
+                id="reportMessage"
+                class="report-message"
+                style="display: none;"
+        ></div>
+
+
+    </section>
+
+
+
+    <!-- =====================================================
+         ROUTE RESULTS
+         ===================================================== -->
+
+    <section id="results">
+
+
+        <div class="results-header">
+
+            <div>
+
+                <div class="eyebrow">
+                    ROUTE ANALYSIS
+                </div>
+
+                <h2>
+                    Route recommendations
+                </h2>
+
+                <p>
+                    Routes are ranked using reported
+                    safety concerns at your selected time.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div id="routeList">
+
+            <div class="empty-state">
+
+                <div class="empty-icon">
+                    <span>→</span>
+                </div>
+
+                <div class="eyebrow">
+                    READY WHEN YOU ARE
+                </div>
+
+                <h3>
+                    Plan your journey
+                </h3>
+
+                <p>
+                    Search for your starting point and
+                    destination to compare available routes.
+                </p>
+
+            </div>
+
+        </div>
+
+
+    </section>
+
+
+</main>
+
+
+
+<!-- =========================================================
+     FOOTER
+     ========================================================= -->
+
+<footer>
+
+    <div class="footer-brand">
+        🛡 SafeSignal
+    </div>
+
+    <p>
+        SafeSignal is an illustrative prototype based on
+        community-reported safety signals.
+        It does not predict crime or guarantee safety.
+    </p>
+
+</footer>
+
+
+
+<!-- =========================================================
+     LEAFLET
+     ========================================================= -->
+
+<script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+
+<script src="app.js"></script>
+
+
+</body>
+
+</html>
