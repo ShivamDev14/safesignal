@@ -28,9 +28,39 @@ const incidentMarkers = [];
 
 const streetlightMarkers = [];
 
+const streetlightCoverageLayers = [];
+
 let originMarker = null;
 
 let destinationMarker = null;
+
+
+// ============================================================
+// STREETLIGHT VISUALIZATION SETTINGS
+// ============================================================
+
+// This is NOT the physical illumination radius.
+// It is only used to determine whether a route section
+// is close enough to a streetlight observation.
+
+const LIGHTING_ROUTE_MATCH_METERS = 120;
+
+
+// ============================================================
+// STREETLIGHT COLORS
+// ============================================================
+
+const LIGHTING_COLORS = {
+
+    WORKING: "#38bdf8",
+
+    DIM: "#f59e0b",
+
+    NOT_WORKING: "#64748b",
+
+    UNKNOWN: "#a78bfa"
+
+};
 
 
 // ============================================================
@@ -40,6 +70,15 @@ let destinationMarker = null;
 let reportLocationMarker = null;
 
 let selectingReportLocation = false;
+
+
+// ============================================================
+// STREETLIGHT REPORT LOCATION STATE
+// ============================================================
+
+let streetlightReportLocationMarker = null;
+
+let selectingStreetlightLocation = false;
 
 
 // ============================================================
@@ -584,6 +623,34 @@ const selectedReportLocation =
 
 
 // ============================================================
+// STREETLIGHT REPORT ELEMENTS
+// ============================================================
+
+const chooseStreetlightLocationButton =
+    document.getElementById(
+        "chooseStreetlightLocation"
+    );
+
+
+const selectedStreetlightLocation =
+    document.getElementById(
+        "selectedStreetlightLocation"
+    );
+
+
+const submitStreetlightReportButton =
+    document.getElementById(
+        "submitStreetlightReport"
+    );
+
+
+const streetlightMessage =
+    document.getElementById(
+        "streetlightMessage"
+    );
+
+
+// ============================================================
 // ENABLE REPORT LOCATION SELECTION
 // ============================================================
 
@@ -592,6 +659,9 @@ if (chooseReportLocationButton) {
     chooseReportLocationButton.addEventListener(
         "click",
         () => {
+
+            selectingStreetlightLocation =
+                false;
 
             selectingReportLocation = true;
 
@@ -615,187 +685,342 @@ if (chooseReportLocationButton) {
 
 
 // ============================================================
-// HANDLE MAP CLICK FOR REPORT LOCATION
+// ENABLE STREETLIGHT LOCATION SELECTION
+// ============================================================
+
+if (chooseStreetlightLocationButton) {
+
+    chooseStreetlightLocationButton.addEventListener(
+        "click",
+        () => {
+
+            selectingReportLocation =
+                false;
+
+            selectingStreetlightLocation =
+                true;
+
+
+            selectedStreetlightLocation.textContent =
+                "Click the streetlight location on the map.";
+
+
+            selectedStreetlightLocation.classList.add(
+                "active"
+            );
+
+
+            map.getContainer().style.cursor =
+                "crosshair";
+
+        }
+    );
+
+}
+
+
+// ============================================================
+// REVERSE GEOCODE LOCATION
+// ============================================================
+
+async function reverseGeocodeLocation(
+    latitude,
+    longitude
+) {
+
+    const response =
+        await fetch(
+            "https://nominatim.openstreetmap.org/reverse" +
+            "?format=json" +
+            "&lat=" +
+            latitude +
+            "&lon=" +
+            longitude +
+            "&zoom=18" +
+            "&addressdetails=1"
+        );
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Could not identify the street."
+        );
+
+    }
+
+
+    const data =
+        await response.json();
+
+
+    const address =
+        data.address || {};
+
+
+    const streetName =
+        address.road ||
+        address.pedestrian ||
+        address.footway ||
+        address.residential ||
+        "Selected Road";
+
+
+    const areaName =
+        address.suburb ||
+        address.neighbourhood ||
+        address.city_district ||
+        address.city ||
+        "Selected Area";
+
+
+    return {
+        streetName,
+        areaName
+    };
+
+}
+
+
+// ============================================================
+// HANDLE MAP CLICK
 // ============================================================
 
 map.on(
     "click",
     async event => {
 
+        // ====================================================
+        // SAFETY REPORT LOCATION
+        // ====================================================
+
         if (
-            !selectingReportLocation
+            selectingReportLocation
         ) {
+
+            selectingReportLocation =
+                false;
+
+
+            map.getContainer().style.cursor =
+                "";
+
+
+            const latitude =
+                event.latlng.lat;
+
+
+            const longitude =
+                event.latlng.lng;
+
+
+            document.getElementById(
+                "reportLatitude"
+            ).value =
+                latitude;
+
+
+            document.getElementById(
+                "reportLongitude"
+            ).value =
+                longitude;
+
+
+            if (reportLocationMarker) {
+
+                map.removeLayer(
+                    reportLocationMarker
+                );
+
+            }
+
+
+            reportLocationMarker =
+                L.marker(
+                    [
+                        latitude,
+                        longitude
+                    ]
+                )
+                    .addTo(map)
+                    .bindPopup(
+                        "<b>Safety report location</b>"
+                    )
+                    .openPopup();
+
+
+            selectedReportLocation.textContent =
+                "Finding street...";
+
+
+            try {
+
+                const location =
+                    await reverseGeocodeLocation(
+                        latitude,
+                        longitude
+                    );
+
+
+                document.getElementById(
+                    "reportStreetName"
+                ).value =
+                    location.streetName;
+
+
+                document.getElementById(
+                    "reportAreaName"
+                ).value =
+                    location.areaName;
+
+
+                selectedReportLocation.textContent =
+                    `📍 ${location.streetName}, ${location.areaName}`;
+
+
+            } catch (error) {
+
+                console.error(
+                    "Report reverse geocoding error:",
+                    error
+                );
+
+
+                selectedReportLocation.textContent =
+                    "Location selected, but street name could not be determined.";
+
+
+                document.getElementById(
+                    "reportStreetName"
+                ).value =
+                    "Selected Road";
+
+
+                document.getElementById(
+                    "reportAreaName"
+                ).value =
+                    "Selected Area";
+
+            }
+
 
             return;
 
         }
 
 
-        selectingReportLocation =
-            false;
+        // ====================================================
+        // STREETLIGHT LOCATION
+        // ====================================================
+
+        if (
+            selectingStreetlightLocation
+        ) {
+
+            selectingStreetlightLocation =
+                false;
 
 
-        map.getContainer().style.cursor =
-            "";
+            map.getContainer().style.cursor =
+                "";
 
 
-        const latitude =
-            event.latlng.lat;
+            const latitude =
+                event.latlng.lat;
 
 
-        const longitude =
-            event.latlng.lng;
+            const longitude =
+                event.latlng.lng;
 
 
-        // ----------------------------------------------------
-        // SAVE COORDINATES
-        // ----------------------------------------------------
-
-        document.getElementById(
-            "reportLatitude"
-        ).value =
-            latitude;
+            document.getElementById(
+                "streetlightLatitude"
+            ).value =
+                latitude;
 
 
-        document.getElementById(
-            "reportLongitude"
-        ).value =
-            longitude;
+            document.getElementById(
+                "streetlightLongitude"
+            ).value =
+                longitude;
 
 
-        // ----------------------------------------------------
-        // REMOVE PREVIOUS REPORT MARKER
-        // ----------------------------------------------------
+            if (streetlightReportLocationMarker) {
 
-        if (reportLocationMarker) {
-
-            map.removeLayer(
-                reportLocationMarker
-            );
-
-        }
-
-
-        // ----------------------------------------------------
-        // ADD REPORT MARKER
-        // ----------------------------------------------------
-
-        reportLocationMarker =
-            L.marker(
-                [
-                    latitude,
-                    longitude
-                ]
-            )
-                .addTo(map)
-                .bindPopup(
-                    "<b>Safety report location</b>"
-                )
-                .openPopup();
-
-
-        selectedReportLocation.textContent =
-            "Finding street...";
-
-
-        // ----------------------------------------------------
-        // REVERSE GEOCODING
-        // ----------------------------------------------------
-
-        try {
-
-            const response =
-                await fetch(
-                    "https://nominatim.openstreetmap.org/reverse" +
-                    "?format=json" +
-                    "&lat=" +
-                    latitude +
-                    "&lon=" +
-                    longitude +
-                    "&zoom=18" +
-                    "&addressdetails=1"
-                );
-
-
-            if (!response.ok) {
-
-                throw new Error(
-                    "Could not identify the street."
+                map.removeLayer(
+                    streetlightReportLocationMarker
                 );
 
             }
 
 
-            const data =
-                await response.json();
+            streetlightReportLocationMarker =
+                L.marker(
+                    [
+                        latitude,
+                        longitude
+                    ]
+                )
+                    .addTo(map)
+                    .bindPopup(
+                        "<b>💡 Streetlight observation</b>"
+                    )
+                    .openPopup();
 
 
-            const address =
-                data.address || {};
+            selectedStreetlightLocation.textContent =
+                "Finding street...";
 
 
-            const streetName =
-                address.road ||
-                address.pedestrian ||
-                address.footway ||
-                address.residential ||
-                "Selected Road";
+            try {
+
+                const location =
+                    await reverseGeocodeLocation(
+                        latitude,
+                        longitude
+                    );
 
 
-            const areaName =
-                address.suburb ||
-                address.neighbourhood ||
-                address.city_district ||
-                address.city ||
-                "Selected Area";
+                document.getElementById(
+                    "streetlightStreetName"
+                ).value =
+                    location.streetName;
 
 
-            // ------------------------------------------------
-            // SAVE STREET
-            // ------------------------------------------------
-
-            document.getElementById(
-                "reportStreetName"
-            ).value =
-                streetName;
+                document.getElementById(
+                    "streetlightAreaName"
+                ).value =
+                    location.areaName;
 
 
-            document.getElementById(
-                "reportAreaName"
-            ).value =
-                areaName;
+                selectedStreetlightLocation.textContent =
+                    `📍 ${location.streetName}, ${location.areaName}`;
 
 
-            // ------------------------------------------------
-            // DISPLAY LOCATION
-            // ------------------------------------------------
+            } catch (error) {
 
-            selectedReportLocation.textContent =
-                `📍 ${streetName}, ${areaName}`;
-
-
-        } catch (error) {
-
-            console.error(
-                "Report reverse geocoding error:",
-                error
-            );
+                console.error(
+                    "Streetlight reverse geocoding error:",
+                    error
+                );
 
 
-            selectedReportLocation.textContent =
-                "Location selected, but street name could not be determined.";
+                selectedStreetlightLocation.textContent =
+                    "Location selected, but street name could not be determined.";
 
 
-            document.getElementById(
-                "reportStreetName"
-            ).value =
-                "Selected Road";
+                document.getElementById(
+                    "streetlightStreetName"
+                ).value =
+                    "Selected Road";
 
 
-            document.getElementById(
-                "reportAreaName"
-            ).value =
-                "Selected Area";
+                document.getElementById(
+                    "streetlightAreaName"
+                ).value =
+                    "Selected Area";
+
+            }
 
         }
 
@@ -1144,6 +1369,10 @@ function isStreetlightNearRoutes(
     }
 
 
+    // IMPORTANT:
+    // This is route matching tolerance only.
+    // It is NOT the physical illumination radius.
+
     const MAX_DISTANCE_METERS =
         300;
 
@@ -1255,6 +1484,704 @@ function isStreetlightNearRoutes(
 
 
 // ============================================================
+// GET STREETLIGHT STATUS LABEL
+// ============================================================
+
+function getLightingStatusLabel(
+    condition
+) {
+
+    switch (
+        condition
+        ) {
+
+        case "WORKING":
+
+            return "Working";
+
+
+        case "DIM":
+
+            return "Dim";
+
+
+        case "NOT_WORKING":
+
+            return "Not working / observed off";
+
+
+        case "UNKNOWN":
+
+            return "Unknown";
+
+
+        default:
+
+            return "Unknown";
+
+    }
+
+}
+
+
+// ============================================================
+// GET NEAREST STREETLIGHT
+// ============================================================
+
+function getNearestStreetlight(
+    latitude,
+    longitude,
+    streetlights,
+    maxDistanceMeters
+) {
+
+    let nearestLight =
+        null;
+
+
+    let nearestDistance =
+        Infinity;
+
+
+    for (
+        const light of streetlights
+        ) {
+
+        const lightLatitude =
+            Number(
+                light.latitude
+            );
+
+
+        const lightLongitude =
+            Number(
+                light.longitude
+            );
+
+
+        if (
+            !Number.isFinite(
+                lightLatitude
+            ) ||
+            !Number.isFinite(
+                lightLongitude
+            )
+        ) {
+
+            continue;
+
+        }
+
+
+        const distance =
+            distanceInMeters(
+                latitude,
+                longitude,
+                lightLatitude,
+                lightLongitude
+            );
+
+
+        if (
+            distance <
+            nearestDistance
+        ) {
+
+            nearestDistance =
+                distance;
+
+            nearestLight =
+                light;
+
+        }
+
+    }
+
+
+    if (
+        nearestLight &&
+        nearestDistance <=
+        maxDistanceMeters
+    ) {
+
+        return {
+
+            light:
+            nearestLight,
+
+            distance:
+            nearestDistance
+
+        };
+
+    }
+
+
+    return null;
+
+}
+
+
+// ============================================================
+// CLEAR STREETLIGHT COVERAGE
+// ============================================================
+
+function clearStreetlightCoverage() {
+
+    streetlightCoverageLayers.forEach(
+        layer => {
+
+            map.removeLayer(
+                layer
+            );
+
+        }
+    );
+
+
+    streetlightCoverageLayers.length =
+        0;
+
+}
+
+
+// ============================================================
+// DRAW STREETLIGHT COVERAGE ALONG ROUTES
+// ============================================================
+
+function drawStreetlightCoverage(
+    routes,
+    streetlights
+) {
+
+    clearStreetlightCoverage();
+
+
+    if (
+        !routes ||
+        routes.length === 0
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        !streetlights ||
+        streetlights.length === 0
+    ) {
+
+        return;
+
+    }
+
+
+    routes.forEach(
+        route => {
+
+            if (
+                !route.geometry ||
+                route.geometry.length < 2
+            ) {
+
+                return;
+
+            }
+
+
+            let currentCondition =
+                null;
+
+
+            let currentCoordinates =
+                [];
+
+
+            function flushCoverageSegment() {
+
+                if (
+                    !currentCondition ||
+                    currentCoordinates.length < 2
+                ) {
+
+                    currentCoordinates =
+                        [];
+
+                    return;
+
+                }
+
+
+                let color =
+                    LIGHTING_COLORS.UNKNOWN;
+
+
+                let dashArray =
+                    null;
+
+
+                let weight =
+                    5;
+
+
+                if (
+                    currentCondition ===
+                    "WORKING"
+                ) {
+
+                    color =
+                        LIGHTING_COLORS.WORKING;
+
+                    weight =
+                        5;
+
+                }
+
+                else if (
+                    currentCondition ===
+                    "DIM"
+                ) {
+
+                    color =
+                        LIGHTING_COLORS.DIM;
+
+                    dashArray =
+                        "8 6";
+
+                    weight =
+                        5;
+
+                }
+
+                else if (
+                    currentCondition ===
+                    "NOT_WORKING"
+                ) {
+
+                    color =
+                        LIGHTING_COLORS.NOT_WORKING;
+
+                    dashArray =
+                        "4 7";
+
+                    weight =
+                        5;
+
+                }
+
+                else {
+
+                    color =
+                        LIGHTING_COLORS.UNKNOWN;
+
+                    dashArray =
+                        "3 6";
+
+                    weight =
+                        4;
+
+                }
+
+
+                const coverageLine =
+                    L.polyline(
+                        currentCoordinates,
+                        {
+                            color:
+                            color,
+
+                            weight:
+                            weight,
+
+                            opacity:
+                                0.9,
+
+                            dashArray:
+                            dashArray,
+
+                            lineCap:
+                                "round",
+
+                            lineJoin:
+                                "round"
+                        }
+                    ).addTo(map);
+
+
+                coverageLine.bindPopup(
+                    `
+                    <div>
+
+                        <b>💡 Lighting coverage</b>
+
+                        <br><br>
+
+                        <b>Status:</b>
+                        ${escapeHtml(
+                        getLightingStatusLabel(
+                            currentCondition
+                        )
+                    )}
+
+                        <br>
+
+                        <b>Route:</b>
+                        ${escapeHtml(
+                        route.routeName
+                    )}
+
+                        <br><br>
+
+                        <span style="color:#64748b;">
+                            Highlighted section is based on
+                            nearby streetlight observations.
+                            It is not a measured illumination
+                            radius.
+                        </span>
+
+                    </div>
+                    `
+                );
+
+
+                streetlightCoverageLayers.push(
+                    coverageLine
+                );
+
+
+                currentCoordinates =
+                    [];
+
+            }
+
+
+            for (
+                let i = 0;
+                i < route.geometry.length - 1;
+                i++
+            ) {
+
+                const start =
+                    route.geometry[i];
+
+
+                const end =
+                    route.geometry[i + 1];
+
+
+                const startLatitude =
+                    Number(
+                        start.latitude
+                    );
+
+
+                const startLongitude =
+                    Number(
+                        start.longitude
+                    );
+
+
+                const endLatitude =
+                    Number(
+                        end.latitude
+                    );
+
+
+                const endLongitude =
+                    Number(
+                        end.longitude
+                    );
+
+
+                if (
+                    !Number.isFinite(
+                        startLatitude
+                    ) ||
+                    !Number.isFinite(
+                        startLongitude
+                    ) ||
+                    !Number.isFinite(
+                        endLatitude
+                    ) ||
+                    !Number.isFinite(
+                        endLongitude
+                    )
+                ) {
+
+                    continue;
+
+                }
+
+
+                const midpointLatitude =
+                    (
+                        startLatitude +
+                        endLatitude
+                    ) / 2;
+
+
+                const midpointLongitude =
+                    (
+                        startLongitude +
+                        endLongitude
+                    ) / 2;
+
+
+                const nearest =
+                    getNearestStreetlight(
+                        midpointLatitude,
+                        midpointLongitude,
+                        streetlights,
+                        LIGHTING_ROUTE_MATCH_METERS
+                    );
+
+
+                const condition =
+                    nearest
+                        ? (
+                            nearest.light.condition ||
+                            "UNKNOWN"
+                        )
+                        : null;
+
+
+                if (
+                    condition !==
+                    currentCondition
+                ) {
+
+                    flushCoverageSegment();
+
+
+                    currentCondition =
+                        condition;
+
+                }
+
+
+                if (
+                    currentCondition
+                ) {
+
+                    if (
+                        currentCoordinates.length === 0
+                    ) {
+
+                        currentCoordinates.push(
+                            [
+                                startLatitude,
+                                startLongitude
+                            ]
+                        );
+
+                    }
+
+
+                    currentCoordinates.push(
+                        [
+                            endLatitude,
+                            endLongitude
+                        ]
+                    );
+
+                }
+
+            }
+
+
+            flushCoverageSegment();
+
+        }
+    );
+
+
+    console.log(
+        "Streetlight coverage segments:",
+        streetlightCoverageLayers.length
+    );
+
+}
+
+
+// ============================================================
+// ADD SINGLE STREETLIGHT MARKER
+// ============================================================
+
+function addStreetlightMarker(
+    light
+) {
+
+    const latitude =
+        Number(
+            light.latitude
+        );
+
+
+    const longitude =
+        Number(
+            light.longitude
+        );
+
+
+    if (
+        !Number.isFinite(latitude) ||
+        !Number.isFinite(longitude)
+    ) {
+
+        return null;
+
+    }
+
+
+    let markerColor =
+        LIGHTING_COLORS.WORKING;
+
+
+    let conditionLabel =
+        "Working";
+
+
+    if (
+        light.condition ===
+        "DIM"
+    ) {
+
+        markerColor =
+            LIGHTING_COLORS.DIM;
+
+        conditionLabel =
+            "Dim";
+
+    }
+
+    else if (
+        light.condition ===
+        "NOT_WORKING"
+    ) {
+
+        markerColor =
+            LIGHTING_COLORS.NOT_WORKING;
+
+        conditionLabel =
+            "Not working / observed off";
+
+    }
+
+    else if (
+        light.condition ===
+        "UNKNOWN"
+    ) {
+
+        markerColor =
+            LIGHTING_COLORS.UNKNOWN;
+
+        conditionLabel =
+            "Unknown";
+
+    }
+
+
+    const marker =
+        L.circleMarker(
+            [
+                latitude,
+                longitude
+            ],
+            {
+                radius: 9,
+
+                color:
+                markerColor,
+
+                fillColor:
+                markerColor,
+
+                fillOpacity: 1,
+
+                weight: 3
+            }
+        ).addTo(map);
+
+
+    marker.bindPopup(
+        `
+        <div>
+
+            <b>💡 Streetlight</b>
+
+            <br><br>
+
+            <b>Condition:</b>
+            ${escapeHtml(
+            conditionLabel
+        )}
+
+            <br>
+
+            <b>Last observed:</b>
+            ${
+            light.lastObservedAt
+                ?
+                escapeHtml(
+                    String(
+                        light.lastObservedAt
+                    ).replace(
+                        "T",
+                        " "
+                    )
+                )
+                :
+                "Unknown"
+        }
+
+            <br>
+
+            <b>Source:</b>
+            ${
+            light.source
+                ?
+                escapeHtml(
+                    String(
+                        light.source
+                    ).replaceAll(
+                        "_",
+                        " "
+                    )
+                )
+                :
+                "Unknown"
+        }
+
+            ${
+            light.notes
+                ?
+                `
+                        <br><br>
+                        ${escapeHtml(
+                    light.notes
+                )}
+                    `
+                :
+                ""
+        }
+
+        </div>
+        `
+    );
+
+
+    streetlightMarkers.push(
+        marker
+    );
+
+
+    return marker;
+
+}
+
+
+// ============================================================
 // LOAD SAFETY INCIDENT + STREETLIGHT OVERLAYS
 // ============================================================
 
@@ -1297,6 +2224,13 @@ async function loadMapOverlays(
 
     streetlightMarkers.length =
         0;
+
+
+    // ========================================================
+    // REMOVE OLD STREETLIGHT COVERAGE
+    // ========================================================
+
+    clearStreetlightCoverage();
 
 
     // ========================================================
@@ -1503,176 +2437,8 @@ async function loadMapOverlays(
         routeRelevantStreetlights.forEach(
             light => {
 
-                let markerColor =
-                    "#22c55e";
-
-
-                let conditionLabel =
-                    "Working";
-
-
-                if (
-                    light.condition ===
-                    "DIM"
-                ) {
-
-                    markerColor =
-                        "#f59e0b";
-
-                    conditionLabel =
-                        "Dim";
-
-                }
-
-                else if (
-                    light.condition ===
-                    "NOT_WORKING"
-                ) {
-
-                    markerColor =
-                        "#ef4444";
-
-                    conditionLabel =
-                        "Not working";
-
-                }
-
-                else if (
-                    light.condition ===
-                    "UNKNOWN"
-                ) {
-
-                    markerColor =
-                        "#94a3b8";
-
-                    conditionLabel =
-                        "Unknown";
-
-                }
-
-
-                const latitude =
-                    Number(
-                        light.latitude
-                    );
-
-
-                const longitude =
-                    Number(
-                        light.longitude
-                    );
-
-
-                if (
-                    !Number.isFinite(
-                        latitude
-                    ) ||
-                    !Number.isFinite(
-                        longitude
-                    )
-                ) {
-
-                    console.warn(
-                        "Invalid streetlight coordinates:",
-                        light
-                    );
-
-                    return;
-
-                }
-
-
-                const marker =
-                    L.circleMarker(
-                        [
-                            latitude,
-                            longitude
-                        ],
-                        {
-                            radius: 9,
-
-                            color:
-                            markerColor,
-
-                            fillColor:
-                            markerColor,
-
-                            fillOpacity: 1,
-
-                            weight: 3
-                        }
-                    ).addTo(map);
-
-
-                marker.bindPopup(
-                    `
-                    <div>
-
-                        <b>💡 Streetlight</b>
-
-                        <br><br>
-
-                        <b>Condition:</b>
-                        ${escapeHtml(
-                        conditionLabel
-                    )}
-
-                        <br>
-
-                        <b>Last observed:</b>
-                        ${
-                        light.lastObservedAt
-                            ?
-                            escapeHtml(
-                                String(
-                                    light.lastObservedAt
-                                ).replace(
-                                    "T",
-                                    " "
-                                )
-                            )
-                            :
-                            "Unknown"
-                    }
-
-                        <br>
-
-                        <b>Source:</b>
-                        ${
-                        light.source
-                            ?
-                            escapeHtml(
-                                String(
-                                    light.source
-                                ).replaceAll(
-                                    "_",
-                                    " "
-                                )
-                            )
-                            :
-                            "Unknown"
-                    }
-
-                        ${
-                        light.notes
-                            ?
-                            `
-                                    <br><br>
-                                    ${escapeHtml(
-                                light.notes
-                            )}
-                                `
-                            :
-                            ""
-                    }
-
-                    </div>
-                    `
-                );
-
-
-                streetlightMarkers.push(
-                    marker
+                addStreetlightMarker(
+                    light
                 );
 
             }
@@ -1682,6 +2448,16 @@ async function loadMapOverlays(
         console.log(
             "Streetlight markers displayed:",
             streetlightMarkers.length
+        );
+
+
+        // ====================================================
+        // DRAW LIGHTING COVERAGE
+        // ====================================================
+
+        drawStreetlightCoverage(
+            routes,
+            routeRelevantStreetlights
         );
 
 
@@ -2695,10 +3471,6 @@ if (submitReportButton) {
         "click",
         async () => {
 
-            // ------------------------------------------------
-            // GET LOCATION
-            // ------------------------------------------------
-
             const latitude =
                 document.getElementById(
                     "reportLatitude"
@@ -2722,10 +3494,6 @@ if (submitReportButton) {
                     "reportAreaName"
                 ).value;
 
-
-            // ------------------------------------------------
-            // GET FORM VALUES
-            // ------------------------------------------------
 
             const incidentType =
                 document.getElementById(
@@ -2757,10 +3525,6 @@ if (submitReportButton) {
                 ).value.trim();
 
 
-            // ------------------------------------------------
-            // VALIDATE LOCATION
-            // ------------------------------------------------
-
             if (
                 !latitude ||
                 !longitude
@@ -2788,10 +3552,6 @@ if (submitReportButton) {
             }
 
 
-            // ------------------------------------------------
-            // VALIDATE INCIDENT TYPE
-            // ------------------------------------------------
-
             if (!incidentType) {
 
                 showReportMessage(
@@ -2803,10 +3563,6 @@ if (submitReportButton) {
 
             }
 
-
-            // ------------------------------------------------
-            // VALIDATE DATE + TIME
-            // ------------------------------------------------
 
             if (
                 !reportDate ||
@@ -2823,10 +3579,6 @@ if (submitReportButton) {
             }
 
 
-            // ------------------------------------------------
-            // VALIDATE DESCRIPTION
-            // ------------------------------------------------
-
             if (!description) {
 
                 showReportMessage(
@@ -2838,10 +3590,6 @@ if (submitReportButton) {
 
             }
 
-
-            // ------------------------------------------------
-            // CREATE DATE + TIME
-            // ------------------------------------------------
 
             const occurredAt =
                 `${reportDate}T${reportTime}`;
@@ -2856,10 +3604,6 @@ if (submitReportButton) {
                 submitReportButton.textContent =
                     "Finding street...";
 
-
-                // ====================================================
-                // RESOLVE STREET SEGMENT
-                // ====================================================
 
                 const segmentResponse =
                     await fetch(
@@ -2919,8 +3663,6 @@ if (submitReportButton) {
 
                     } catch (error) {
 
-                        // Ignore JSON parsing error
-
                     }
 
 
@@ -2934,10 +3676,6 @@ if (submitReportButton) {
                 const segment =
                     await segmentResponse.json();
 
-
-                // ====================================================
-                // CREATE REPORT DATA
-                // ====================================================
 
                 const reportData = {
 
@@ -2962,10 +3700,6 @@ if (submitReportButton) {
 
                 };
 
-
-                // ====================================================
-                // SUBMIT REPORT
-                // ====================================================
 
                 submitReportButton.textContent =
                     "Submitting...";
@@ -3014,8 +3748,6 @@ if (submitReportButton) {
 
                     } catch (error) {
 
-                        // Ignore JSON parsing error
-
                     }
 
 
@@ -3029,19 +3761,11 @@ if (submitReportButton) {
                 await response.json();
 
 
-                // ====================================================
-                // SUCCESS
-                // ====================================================
-
                 showReportMessage(
                     "Report successfully recorded. Thank you for making your community safer.",
                     false
                 );
 
-
-                // ====================================================
-                // RESET FORM
-                // ====================================================
 
                 document.getElementById(
                     "incidentType"
@@ -3094,10 +3818,6 @@ if (submitReportButton) {
                 );
 
 
-                // ------------------------------------------------
-                // REMOVE REPORT MARKER
-                // ------------------------------------------------
-
                 if (reportLocationMarker) {
 
                     map.removeLayer(
@@ -3139,6 +3859,362 @@ if (submitReportButton) {
 
         }
     );
+
+}
+
+
+// ============================================================
+// STREETLIGHT REPORTING
+// ============================================================
+
+if (submitStreetlightReportButton) {
+
+    submitStreetlightReportButton.addEventListener(
+        "click",
+        async () => {
+
+            // ------------------------------------------------
+            // GET LOCATION
+            // ------------------------------------------------
+
+            const latitude =
+                document.getElementById(
+                    "streetlightLatitude"
+                ).value;
+
+
+            const longitude =
+                document.getElementById(
+                    "streetlightLongitude"
+                ).value;
+
+
+            const streetName =
+                document.getElementById(
+                    "streetlightStreetName"
+                ).value;
+
+
+            const areaName =
+                document.getElementById(
+                    "streetlightAreaName"
+                ).value;
+
+
+            // ------------------------------------------------
+            // GET FORM VALUES
+            // ------------------------------------------------
+
+            const condition =
+                document.getElementById(
+                    "streetlightCondition"
+                ).value;
+
+
+            const notes =
+                document.getElementById(
+                    "streetlightNotes"
+                ).value.trim();
+
+
+            // ------------------------------------------------
+            // VALIDATE LOCATION
+            // ------------------------------------------------
+
+            if (
+                !latitude ||
+                !longitude
+            ) {
+
+                showStreetlightMessage(
+                    "Please choose the streetlight location on the map.",
+                    true
+                );
+
+                return;
+
+            }
+
+
+            if (!streetName) {
+
+                showStreetlightMessage(
+                    "Please select a valid streetlight location.",
+                    true
+                );
+
+                return;
+
+            }
+
+
+            // ------------------------------------------------
+            // VALIDATE CONDITION
+            // ------------------------------------------------
+
+            if (!condition) {
+
+                showStreetlightMessage(
+                    "Please select the streetlight condition.",
+                    true
+                );
+
+                return;
+
+            }
+
+
+            try {
+
+                submitStreetlightReportButton.disabled =
+                    true;
+
+
+                submitStreetlightReportButton.textContent =
+                    "Saving observation...";
+
+
+                // ====================================================
+                // SAVE COMMUNITY STREETLIGHT OBSERVATION
+                // ====================================================
+
+                const response =
+                    await fetch(
+                        "/api/streetlights",
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+
+                            body:
+                                JSON.stringify({
+
+                                    latitude:
+                                        Number(
+                                            latitude
+                                        ),
+
+                                    longitude:
+                                        Number(
+                                            longitude
+                                        ),
+
+                                    streetName:
+                                    streetName,
+
+                                    areaName:
+                                    areaName,
+
+                                    condition:
+                                    condition,
+
+                                    notes:
+                                    notes
+
+                                })
+                        }
+                    );
+
+
+                if (!response.ok) {
+
+                    let errorMessage =
+                        "Unable to save the streetlight observation.";
+
+
+                    try {
+
+                        const errorData =
+                            await response.json();
+
+
+                        if (
+                            errorData.message
+                        ) {
+
+                            errorMessage =
+                                errorData.message;
+
+                        }
+
+                    } catch (error) {
+
+                        // Ignore JSON parsing errors
+
+                    }
+
+
+                    throw new Error(
+                        errorMessage
+                    );
+
+                }
+
+
+                const savedStreetlight =
+                    await response.json();
+
+
+                // ====================================================
+                // SUCCESS
+                // ====================================================
+
+                showStreetlightMessage(
+                    "Streetlight observation recorded successfully.",
+                    false
+                );
+
+
+                // ====================================================
+                // REMOVE TEMPORARY LOCATION MARKER
+                // ====================================================
+
+                if (
+                    streetlightReportLocationMarker
+                ) {
+
+                    map.removeLayer(
+                        streetlightReportLocationMarker
+                    );
+
+
+                    streetlightReportLocationMarker =
+                        null;
+
+                }
+
+
+                // ====================================================
+                // RESET FORM
+                // ====================================================
+
+                document.getElementById(
+                    "streetlightLatitude"
+                ).value =
+                    "";
+
+
+                document.getElementById(
+                    "streetlightLongitude"
+                ).value =
+                    "";
+
+
+                document.getElementById(
+                    "streetlightStreetName"
+                ).value =
+                    "";
+
+
+                document.getElementById(
+                    "streetlightAreaName"
+                ).value =
+                    "";
+
+
+                document.getElementById(
+                    "streetlightCondition"
+                ).value =
+                    "";
+
+
+                document.getElementById(
+                    "streetlightNotes"
+                ).value =
+                    "";
+
+
+                selectedStreetlightLocation.textContent =
+                    "No location selected";
+
+
+                selectedStreetlightLocation.classList.remove(
+                    "active"
+                );
+
+
+                // ====================================================
+                // SHOW NEW MARKER IMMEDIATELY
+                // ====================================================
+
+                addStreetlightMarker(
+                    savedStreetlight
+                );
+
+
+            } catch (error) {
+
+                console.error(
+                    "Streetlight report error:",
+                    error
+                );
+
+
+                showStreetlightMessage(
+                    error.message ||
+                    "Failed to save streetlight observation.",
+                    true
+                );
+
+
+            } finally {
+
+                submitStreetlightReportButton.disabled =
+                    false;
+
+
+                submitStreetlightReportButton.innerHTML = `
+                    <span>💡</span>
+
+                    Submit lighting observation
+
+                    <span class="button-arrow">
+                        →
+                    </span>
+                `;
+
+            }
+
+        }
+    );
+
+}
+
+
+// ============================================================
+// SHOW STREETLIGHT MESSAGE
+// ============================================================
+
+function showStreetlightMessage(
+    text,
+    isError
+) {
+
+    if (!streetlightMessage) {
+
+        return;
+
+    }
+
+
+    streetlightMessage.style.display =
+        "block";
+
+
+    streetlightMessage.textContent =
+        text;
+
+
+    streetlightMessage.className =
+        "report-message " +
+        (
+            isError
+                ? "error-message"
+                : ""
+        );
 
 }
 

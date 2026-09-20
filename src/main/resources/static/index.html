@@ -331,12 +331,19 @@
                 </div>
 
 
+                <!-- ROUTES -->
+
+                <div class="legend-section-title">
+                    ROUTES
+                </div>
+
+
                 <div class="legend-row">
 
                     <span class="legend-line recommended-line"></span>
 
                     <span>
-                        Recommended
+                        Recommended route
                     </span>
 
                 </div>
@@ -353,6 +360,13 @@
                 </div>
 
 
+                <!-- SAFETY -->
+
+                <div class="legend-section-title">
+                    SAFETY
+                </div>
+
+
                 <div class="legend-row">
 
                     <span class="legend-dot incident-dot"></span>
@@ -364,15 +378,19 @@
                 </div>
 
 
-                <div class="legend-divider"></div>
+                <!-- LIGHTING -->
+
+                <div class="legend-section-title">
+                    LIGHTING OBSERVATIONS
+                </div>
 
 
                 <div class="legend-row">
 
-                    <span class="legend-dot light-working"></span>
+                    <span class="legend-light-line light-working"></span>
 
                     <span>
-                        Working light
+                        Working observation
                     </span>
 
                 </div>
@@ -380,10 +398,10 @@
 
                 <div class="legend-row">
 
-                    <span class="legend-dot light-dim"></span>
+                    <span class="legend-light-line light-dim"></span>
 
                     <span>
-                        Dim light
+                        Dim observation
                     </span>
 
                 </div>
@@ -391,11 +409,19 @@
 
                 <div class="legend-row">
 
-                    <span class="legend-dot light-off"></span>
+                    <span class="legend-light-line light-off"></span>
 
                     <span>
-                        Not working
+                        Not working / off
                     </span>
+
+                </div>
+
+
+                <div class="legend-note">
+
+                    Highlighted lighting sections show nearby
+                    observations; they are not an illumination radius.
 
                 </div>
 
@@ -687,6 +713,200 @@
 
         <div
                 id="reportMessage"
+                class="report-message"
+                style="display: none;"
+        ></div>
+
+
+    </section>
+
+
+
+    <!-- =====================================================
+         REPORT STREETLIGHT
+         ===================================================== -->
+
+    <section class="search-panel report-panel">
+
+        <div class="section-title report-title">
+
+            <div class="report-icon">
+                💡
+            </div>
+
+
+            <div>
+
+                <div class="eyebrow">
+                    COMMUNITY LIGHTING SIGNAL
+                </div>
+
+                <h2>
+                    Report a streetlight
+                </h2>
+
+                <p>
+                    Help improve lighting information by reporting
+                    the condition of a streetlight near your route.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="privacy-note">
+
+            <span>🔒</span>
+
+            Reports are community observations and do not
+            represent official municipal data.
+
+        </div>
+
+
+
+        <!-- LOCATION + CONDITION -->
+
+        <div class="form-grid report-grid">
+
+
+            <!-- REPORT LOCATION -->
+
+            <div class="form-group">
+
+                <label>
+                    <span class="label-icon">📍</span>
+                    Streetlight location
+                </label>
+
+
+                <button
+                        type="button"
+                        id="chooseStreetlightLocation"
+                        class="secondary-button"
+                >
+
+                    <span>📍</span>
+
+                    Choose location on map
+
+                    <span class="button-arrow">
+                        →
+                    </span>
+
+                </button>
+
+
+                <div
+                        id="selectedStreetlightLocation"
+                        class="location-status"
+                >
+                    No location selected
+                </div>
+
+
+                <input
+                        type="hidden"
+                        id="streetlightLatitude"
+                >
+
+                <input
+                        type="hidden"
+                        id="streetlightLongitude"
+                >
+
+                <input
+                        type="hidden"
+                        id="streetlightStreetName"
+                >
+
+                <input
+                        type="hidden"
+                        id="streetlightAreaName"
+                >
+
+            </div>
+
+
+
+            <!-- CONDITION -->
+
+            <div class="form-group">
+
+                <label for="streetlightCondition">
+                    <span class="label-icon">💡</span>
+                    Light condition
+                </label>
+
+
+                <select id="streetlightCondition">
+
+                    <option value="">
+                        Select condition
+                    </option>
+
+                    <option value="WORKING">
+                        Working
+                    </option>
+
+                    <option value="DIM">
+                        Dim
+                    </option>
+
+                    <option value="NOT_WORKING">
+                        Not working
+                    </option>
+
+                </select>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- NOTES -->
+
+        <div class="form-group">
+
+            <label for="streetlightNotes">
+                <span class="label-icon">✎</span>
+                Optional note
+            </label>
+
+
+            <textarea
+                    id="streetlightNotes"
+                    rows="3"
+                    maxlength="500"
+                    placeholder="Example: Light is flickering or very weak..."
+            ></textarea>
+
+        </div>
+
+
+
+        <!-- SUBMIT -->
+
+        <button
+                id="submitStreetlightReport"
+                class="report-submit-button"
+        >
+
+            <span>💡</span>
+
+            Submit lighting observation
+
+            <span class="button-arrow">
+                →
+            </span>
+
+        </button>
+
+
+        <div
+                id="streetlightMessage"
                 class="report-message"
                 style="display: none;"
         ></div>

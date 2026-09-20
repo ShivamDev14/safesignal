@@ -967,7 +967,7 @@ button {
 
     z-index: 1000;
 
-    min-width: 180px;
+    min-width: 205px;
 
     padding: 14px;
 
@@ -1002,6 +1002,25 @@ button {
 }
 
 
+.legend-section-title {
+
+    margin-top: 11px;
+
+    margin-bottom: 7px;
+
+    color: #647b98;
+
+    font-size: 8px;
+
+    font-weight: 850;
+
+    letter-spacing: 1px;
+
+    text-transform: uppercase;
+
+}
+
+
 .legend-row {
 
     display: flex;
@@ -1031,6 +1050,8 @@ button {
     width: 22px;
 
     height: 4px;
+
+    flex-shrink: 0;
 
     border-radius: 999px;
 
@@ -1073,34 +1094,79 @@ button {
 }
 
 
+/* =========================================================
+   LIGHTING LEGEND
+   ========================================================= */
+
+.legend-light-line {
+
+    width: 24px;
+
+    height: 4px;
+
+    flex-shrink: 0;
+
+    border-radius: 999px;
+
+}
+
+
 .light-working {
 
-    background: var(--green);
+    background: #38bdf8;
+
+    box-shadow:
+            0 0 7px rgba(56, 189, 248, 0.45);
 
 }
 
 
 .light-dim {
 
-    background: var(--amber);
+    background: #f59e0b;
+
+    background-image:
+            repeating-linear-gradient(
+                    90deg,
+                    #f59e0b 0,
+                    #f59e0b 7px,
+                    transparent 7px,
+                    transparent 11px
+            );
 
 }
 
 
 .light-off {
 
-    background: var(--red);
+    background: #64748b;
+
+    background-image:
+            repeating-linear-gradient(
+                    90deg,
+                    #64748b 0,
+                    #64748b 4px,
+                    transparent 4px,
+                    transparent 8px
+            );
 
 }
 
 
-.legend-divider {
+.legend-note {
 
-    height: 1px;
+    margin-top: 10px;
 
-    background: rgba(43, 61, 89, 0.8);
+    padding-top: 9px;
 
-    margin: 10px 0;
+    border-top:
+            1px solid rgba(43, 61, 89, 0.7);
+
+    color: #64748b;
+
+    font-size: 8px;
+
+    line-height: 1.45;
 
 }
 
@@ -2147,9 +2213,18 @@ footer {
 
         bottom: 10px;
 
-        min-width: 155px;
+        min-width: 175px;
+
+        max-width: 190px;
 
         padding: 11px;
+
+    }
+
+
+    .legend-note {
+
+        font-size: 7px;
 
     }
 

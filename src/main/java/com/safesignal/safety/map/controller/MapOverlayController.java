@@ -15,19 +15,33 @@ public class MapOverlayController {
 
     private final MapOverlayService mapOverlayService;
 
-    public MapOverlayController(MapOverlayService mapOverlayService) {
-        this.mapOverlayService = mapOverlayService;
+    public MapOverlayController(
+            MapOverlayService mapOverlayService) {
+
+        this.mapOverlayService =
+                mapOverlayService;
     }
 
     @GetMapping
     public MapOverlayResponse getOverlay(
-            @RequestParam Long originId,
-            @RequestParam Long destinationId,
+
+            @RequestParam double originLat,
+
+            @RequestParam double originLon,
+
+            @RequestParam double destinationLat,
+
+            @RequestParam double destinationLon,
+
             @RequestParam LocalDateTime at
+
     ) {
+
         return mapOverlayService.getOverlay(
-                originId,
-                destinationId,
+                originLat,
+                originLon,
+                destinationLat,
+                destinationLon,
                 at
         );
     }

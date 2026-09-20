@@ -9,9 +9,11 @@ import com.safesignal.route.dto.StreetSegmentResponse;
 import com.safesignal.routing.dto.CoordinatePoint;
 import com.safesignal.routing.dto.CoordinateRouteResponse;
 import com.safesignal.routing.service.OsrmRoutingService;
+import com.safesignal.streetlight.entity.Streetlight;
+import com.safesignal.streetlight.model.StreetlightCondition;
+import com.safesignal.streetlight.repository.StreetlightRepository;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,16 +24,22 @@ public class RouteCalculationService {
 
     private final SafetyReportRepository safetyReportRepository;
 
+    private final StreetlightRepository streetlightRepository;
+
 
     public RouteCalculationService(
             OsrmRoutingService osrmRoutingService,
-            SafetyReportRepository safetyReportRepository) {
+            SafetyReportRepository safetyReportRepository,
+            StreetlightRepository streetlightRepository) {
 
         this.osrmRoutingService =
                 osrmRoutingService;
 
         this.safetyReportRepository =
                 safetyReportRepository;
+
+        this.streetlightRepository =
+                streetlightRepository;
     }
 
 
@@ -169,18 +177,22 @@ public class RouteCalculationService {
 
 
     // ============================================================
-    // CALCULATE SAFETY CONCERN SCORE
+    // CALCULATE TOTAL SAFETY CONCERN SCORE
     // ============================================================
 
     public double calculateSafetyScore(
             RouteResponse route,
             int travelHour) {
 
+        // ========================================================
+        // PART 1 — SAFETY INCIDENT SCORE
+        // ========================================================
+
         List<SafetyReport> reports =
                 safetyReportRepository.findAll();
 
 
-        double totalScore = 0.0;
+        double incidentScore = 0.0;
 
 
         for (SafetyReport report : reports) {
@@ -213,14 +225,6 @@ public class RouteCalculationService {
                             reportHour
                     );
 
-
-            /*
-             * Reports within 2 hours of the travel time
-             * are considered highly relevant.
-             *
-             * Reports 3-4 hours away still contribute,
-             * but with lower weight.
-             */
 
             double timeWeight;
 
@@ -281,10 +285,29 @@ public class RouteCalculationService {
                             * nightMultiplier;
 
 
-            totalScore +=
+            incidentScore +=
                     reportContribution;
-
         }
+
+
+        // ========================================================
+        // PART 2 — STREETLIGHT SCORE
+        // ========================================================
+
+        double streetlightScore =
+                calculateStreetlightScore(
+                        route,
+                        travelHour
+                );
+
+
+        // ========================================================
+        // FINAL SCORE
+        // ========================================================
+
+        double totalScore =
+                incidentScore
+                        + streetlightScore;
 
 
         return Math.round(
@@ -294,7 +317,84 @@ public class RouteCalculationService {
 
 
     // ============================================================
-    // CHECK WHETHER REPORT IS CLOSE TO ROUTE
+    // CALCULATE STREETLIGHT CONCERN SCORE
+    // ============================================================
+
+    private double calculateStreetlightScore(
+            RouteResponse route,
+            int travelHour) {
+
+        List<Streetlight> streetlights =
+                streetlightRepository.findAll();
+
+
+        double totalScore = 0.0;
+
+
+        for (Streetlight streetlight : streetlights) {
+
+            // ----------------------------------------------------
+            // Ignore streetlights that are not near this route
+            // ----------------------------------------------------
+
+            if (!isStreetlightNearRoute(
+                    streetlight,
+                    route.geometry()
+            )) {
+
+                continue;
+            }
+
+
+            // ----------------------------------------------------
+            // Working light
+            // ----------------------------------------------------
+
+            if (streetlight.getCondition()
+                    == StreetlightCondition.WORKING) {
+
+                continue;
+            }
+
+
+            // ----------------------------------------------------
+            // Dim light
+            // ----------------------------------------------------
+
+            if (streetlight.getCondition()
+                    == StreetlightCondition.DIM) {
+
+                totalScore +=
+                        isNightTime(travelHour)
+                                ? 1.0
+                                : 0.5;
+
+            }
+
+
+            // ----------------------------------------------------
+            // Not working light
+            // ----------------------------------------------------
+
+            else if (streetlight.getCondition()
+                    == StreetlightCondition.NOT_WORKING) {
+
+                totalScore +=
+                        isNightTime(travelHour)
+                                ? 2.0
+                                : 1.0;
+
+            }
+
+        }
+
+
+        return totalScore;
+    }
+
+
+    // ============================================================
+    // CHECK WHETHER SAFETY REPORT IS CLOSE TO ROUTE
     // ============================================================
 
     private boolean isReportNearRoute(
@@ -307,7 +407,6 @@ public class RouteCalculationService {
         ) {
 
             return false;
-
         }
 
 
@@ -322,13 +421,6 @@ public class RouteCalculationService {
                         .getStartLongitude()
                         .doubleValue();
 
-
-        /*
-         * 100 metres is used as the matching radius.
-         *
-         * This works well for our prototype because
-         * reports are created from a map click.
-         */
 
         final double MAX_DISTANCE_METERS =
                 100.0;
@@ -351,9 +443,63 @@ public class RouteCalculationService {
             ) {
 
                 return true;
-
             }
+        }
 
+
+        return false;
+    }
+
+
+    // ============================================================
+    // CHECK WHETHER STREETLIGHT IS CLOSE TO ROUTE
+    // ============================================================
+
+    private boolean isStreetlightNearRoute(
+            Streetlight streetlight,
+            List<CoordinatePoint> geometry) {
+
+        if (
+                geometry == null ||
+                        geometry.isEmpty()
+        ) {
+
+            return false;
+        }
+
+
+        double streetlightLatitude =
+                streetlight.getLatitude()
+                        .doubleValue();
+
+
+        double streetlightLongitude =
+                streetlight.getLongitude()
+                        .doubleValue();
+
+
+        final double MAX_DISTANCE_METERS =
+                100.0;
+
+
+        for (CoordinatePoint point : geometry) {
+
+            double distance =
+                    distanceInMeters(
+                            streetlightLatitude,
+                            streetlightLongitude,
+                            point.latitude(),
+                            point.longitude()
+                    );
+
+
+            if (
+                    distance <=
+                            MAX_DISTANCE_METERS
+            ) {
+
+                return true;
+            }
         }
 
 
