@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@Profile("mysql")
+@Profile({"mysql", "default", "h2", "tidb"})
 @RequestMapping("/api/safety-reports")
 public class SafetyReportController {
 

@@ -26,7 +26,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Configuration
-@Profile("mysql")
+@Profile({"mysql", "default", "h2", "tidb"})
 public class DemoDataInitializer {
 
     @Bean

@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 import java.util.Map;
 
 @RestController
-@Profile("mysql")
+@Profile({"mysql", "default", "h2", "tidb"})
 @RequestMapping("/api/street-segments")
 public class StreetSegmentController {
 

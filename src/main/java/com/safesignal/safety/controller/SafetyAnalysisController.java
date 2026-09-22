@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDateTime;
 
 @RestController
-@Profile("mysql")
+@Profile({"mysql", "default", "h2", "tidb"})
 @RequestMapping("/api/street-segments")
 public class SafetyAnalysisController {
 

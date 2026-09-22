@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-@Profile("mysql")
+@Profile({"mysql", "default", "h2", "tidb"})
 public class SafetyReportService {
 
     private final SafetyReportRepository safetyReportRepository;

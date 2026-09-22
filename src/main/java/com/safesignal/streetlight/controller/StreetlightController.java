@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@Profile("mysql")
+@Profile({"mysql", "default", "h2", "tidb"})
 @RequestMapping("/api/streetlights")
 public class StreetlightController {
 

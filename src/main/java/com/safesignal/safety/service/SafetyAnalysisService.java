@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-@Profile("mysql")
+@Profile({"mysql", "default", "h2", "tidb"})
 public class SafetyAnalysisService {
 
     private static final String DISCLAIMER = "This is an illustrative prototype score based on community reports and streetlight data. It does not predict crime or guarantee safety.";
