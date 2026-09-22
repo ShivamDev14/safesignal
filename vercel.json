@@ -1,15 +1,4 @@
 {
   "version": 2,
-  "public": false,
-  "cleanUrls": true,
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "https://YOUR_BACKEND_URL.onrender.com/api/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/src/main/resources/static/$1"
-    }
-  ]
+  "cleanUrls": true
 }
